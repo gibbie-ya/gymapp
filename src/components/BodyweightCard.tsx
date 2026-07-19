@@ -1,7 +1,30 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { colors, ui } from '../lib/utils'
+import { colors, ui, localDateStr, mondayOf } from '../lib/utils'
 import type { BodyWeightLog } from '../lib/types'
+
+interface WeekAvg {
+  weekStart: string
+  avg: number
+  count: number
+}
+
+function weeklyAverages(entries: BodyWeightLog[]): WeekAvg[] {
+  const groups = new Map<string, number[]>()
+  for (const e of entries) {
+    const key = mondayOf(e.logged_date)
+    const arr = groups.get(key) ?? []
+    arr.push(e.weight_kg)
+    groups.set(key, arr)
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekStart, vals]) => ({
+      weekStart,
+      avg: Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10,
+      count: vals.length,
+    }))
+}
 
 export function BodyweightCard() {
   const [entries, setEntries] = useState<BodyWeightLog[]>([])
@@ -29,7 +52,7 @@ export function BodyweightCard() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = localDateStr(new Date())
     await supabase
       .from('body_weight_logs')
       .upsert(
@@ -52,36 +75,41 @@ export function BodyweightCard() {
     setSaving(false)
   }
 
-  const latest = entries[entries.length - 1]
-  const first = entries[0]
-  const change = latest && first && entries.length > 1
-    ? Math.round((latest.weight_kg - first.weight_kg) * 10) / 10
+  const today = localDateStr(new Date())
+  const todayEntry = entries.find(e => e.logged_date === today)
+  const weeks = weeklyAverages(entries)
+  const thisWeekStart = mondayOf(today)
+  const thisWeek = weeks.find(w => w.weekStart === thisWeekStart)
+  const latestWeek = weeks[weeks.length - 1]
+  const firstWeek = weeks[0]
+  const change = weeks.length > 1
+    ? Math.round((latestWeek.avg - firstWeek.avg) * 10) / 10
     : null
 
-  // Trend line: x scaled over actual dates, not entry index
+  // Weekly-average trend line, x scaled over actual week dates
   let chart = null
-  if (entries.length > 1) {
+  if (weeks.length > 1) {
     const width = 560
     const height = 110
     const pad = { top: 14, right: 20, bottom: 20, left: 40 }
     const chartW = width - pad.left - pad.right
     const chartH = height - pad.top - pad.bottom
 
-    const t0 = new Date(first.logged_date).getTime()
-    const t1 = new Date(latest.logged_date).getTime()
+    const t0 = new Date(`${firstWeek.weekStart}T00:00:00`).getTime()
+    const t1 = new Date(`${latestWeek.weekStart}T00:00:00`).getTime()
     const span = t1 - t0 || 1
-    const weights = entries.map(e => e.weight_kg)
-    const rawMin = Math.min(...weights)
-    const rawMax = Math.max(...weights)
+    const avgs = weeks.map(w => w.avg)
+    const rawMin = Math.min(...avgs)
+    const rawMax = Math.max(...avgs)
     const flat = rawMax === rawMin
     const min = flat ? rawMin - 2 : rawMin
     const max = flat ? rawMax + 2 : rawMax
 
-    const x = (d: string) => pad.left + ((new Date(d).getTime() - t0) / span) * chartW
+    const x = (weekStart: string) => pad.left + ((new Date(`${weekStart}T00:00:00`).getTime() - t0) / span) * chartW
     const y = (w: number) => pad.top + chartH - ((w - min) / (max - min)) * chartH
 
-    const pathD = entries
-      .map((e, i) => `${i === 0 ? 'M' : 'L'}${x(e.logged_date).toFixed(1)},${y(e.weight_kg).toFixed(1)}`)
+    const pathD = weeks
+      .map((w, i) => `${i === 0 ? 'M' : 'L'}${x(w.weekStart).toFixed(1)},${y(w.avg).toFixed(1)}`)
       .join(' ')
 
     chart = (
@@ -101,16 +129,26 @@ export function BodyweightCard() {
         ))}
         <path d={pathD} fill="none" stroke={colors.green} strokeWidth={2.5}
           strokeLinejoin="round" strokeLinecap="round" />
-        {entries.map(e => (
-          <circle key={e.logged_date} cx={x(e.logged_date)} cy={y(e.weight_kg)}
-            r={e === latest ? 4.5 : 3} fill={e === latest ? colors.green : colors.card}
+        {weeks.map(w => (
+          <circle key={w.weekStart} cx={x(w.weekStart)} cy={y(w.avg)}
+            r={w === latestWeek ? 4.5 : 3} fill={w === latestWeek ? colors.green : colors.card}
             stroke={colors.green} strokeWidth={2} />
         ))}
+        <text
+          x={x(latestWeek.weekStart)}
+          y={y(latestWeek.avg) - 10}
+          textAnchor="middle"
+          fontSize={10.5}
+          fontWeight={700}
+          fill={colors.green}
+        >
+          {latestWeek.avg}kg
+        </text>
         <text x={pad.left} y={height - 2} fontSize={9.5} fill={colors.textDim}>
-          {new Date(first.logged_date).toLocaleDateString()}
+          {new Date(`${firstWeek.weekStart}T00:00:00`).toLocaleDateString()}
         </text>
         <text x={width - pad.right} y={height - 2} textAnchor="end" fontSize={9.5} fill={colors.textDim}>
-          {new Date(latest.logged_date).toLocaleDateString()}
+          {new Date(`${latestWeek.weekStart}T00:00:00`).toLocaleDateString()}
         </text>
       </svg>
     )
@@ -130,23 +168,26 @@ export function BodyweightCard() {
           <h3 style={{ color: colors.textPrimary, fontWeight: 700, fontSize: '16px', margin: 0 }}>
             Bodyweight
           </h3>
-          {latest ? (
+          {thisWeek ? (
             <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '3px' }}>
-              <span style={{ color: colors.textPrimary, fontWeight: 700, fontSize: '15px' }}>{latest.weight_kg}kg</span>
-              {' '}on {new Date(latest.logged_date).toLocaleDateString()}
+              This week:{' '}
+              <span style={{ color: colors.textPrimary, fontWeight: 700, fontSize: '15px' }}>
+                {thisWeek.avg}kg
+              </span>
+              {' '}avg of {thisWeek.count} weigh-in{thisWeek.count === 1 ? '' : 's'}
               {change !== null && (
                 <span style={{
                   marginLeft: '8px',
                   color: change < 0 ? colors.greenBright : change > 0 ? colors.amber : colors.textMuted,
                   fontWeight: 600,
                 }}>
-                  {change > 0 ? '▲' : change < 0 ? '▼' : ''} {Math.abs(change)}kg since start
+                  {change > 0 ? '▲' : change < 0 ? '▼' : ''} {Math.abs(change)}kg vs first week
                 </span>
               )}
             </div>
           ) : (
             <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '3px' }}>
-              Log a weekly weigh-in to see your trend.
+              Weigh in daily — progress tracks the weekly average, so day-to-day noise washes out.
             </div>
           )}
         </div>
@@ -186,11 +227,22 @@ export function BodyweightCard() {
               opacity: saving ? 0.7 : 1,
             }}
           >
-            {saving ? 'Saving...' : 'Log'}
+            {saving ? 'Saving...' : todayEntry ? 'Update' : 'Log'}
           </button>
         </div>
       </div>
-      {chart}
+
+      {todayEntry && (
+        <div style={{ color: colors.textDim, fontSize: '11px', marginTop: '6px' }}>
+          Today: {todayEntry.weight_kg}kg logged
+        </div>
+      )}
+
+      {chart ?? (weeks.length === 1 && (
+        <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '12px' }}>
+          Trend appears once you've logged across two or more weeks — each point is a Monday–Sunday weekly average.
+        </div>
+      ))}
     </div>
   )
 }

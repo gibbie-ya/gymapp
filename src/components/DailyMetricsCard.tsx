@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { colors, ui } from '../lib/utils'
+import { colors, ui, localDateStr, mondayOf } from '../lib/utils'
 import type { DailyMetric } from '../lib/types'
 
 type Metric = 'calories' | 'steps'
@@ -9,17 +9,6 @@ type Period = 'days' | 'weeks' | 'months'
 const METRIC_META: Record<Metric, { label: string; unit: string; color: string }> = {
   calories: { label: 'Calories', unit: 'kcal', color: '#f59e0b' },
   steps: { label: 'Steps', unit: 'steps', color: '#22c55e' },
-}
-
-function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-// Weeks run Monday–Sunday: the grouping boundary is Sunday midnight
-function mondayOf(dateStr: string): string {
-  const d = new Date(`${dateStr}T00:00:00`)
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-  return localDateStr(d)
 }
 
 function shortDay(dateStr: string): string {

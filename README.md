@@ -28,7 +28,7 @@ Replaces a previous localStorage-based single-page app — all data now lives in
 - **Plate calculator** — enter a target weight and get the per-side plate breakdown; bar weight and your plate inventory are configurable (saved on-device).
 - **Session stats** — live total volume (kg) while logging, a "Workout completed in X min · Y kg" banner on save, and per-session volume on the week view cards.
 - **Progress** — SVG line chart of top set weight per week per exercise, plus best-set / estimated-1RM (Epley) / total-volume / weeks-logged stats and a full set history table.
-- **Bodyweight tracking** — quick weigh-in entry on the Progress page with a date-scaled trend line and change-since-start.
+- **Bodyweight tracking** — daily weigh-ins on the Progress page; progress is tracked as the Monday–Sunday weekly average (daily noise washes out), charted as a trend line with change vs the first week.
 - **Calories & steps** — daily entry on the Progress page, charted by day, week, or month (weekly buckets run Monday–Sunday, resetting Sunday midnight); weekly/monthly views show per-day averages.
 - **JSON import** — paste a programme definition, preview it, and import. Week ranges like `"1-4"` or `"1,3,5"` expand into per-week session rows. Re-importing a programme with the same name prompts before overwriting.
 

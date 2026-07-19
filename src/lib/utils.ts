@@ -24,6 +24,17 @@ export function parseWeekRange(applies_to_weeks: string): number[] {
   return weeks
 }
 
+export function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Weeks run Monday–Sunday: the grouping boundary is Sunday midnight
+export function mondayOf(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`)
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return localDateStr(d)
+}
+
 // Epley formula: 1RM = w × (1 + reps/30)
 export function epley1RM(weightKg: number, reps: number): number {
   return reps <= 1 ? weightKg : weightKg * (1 + reps / 30)
