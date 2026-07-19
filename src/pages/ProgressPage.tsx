@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Layout } from '../components/Layout'
 import { ProgressChart } from '../components/ProgressChart'
 import { BodyweightCard } from '../components/BodyweightCard'
+import { DailyMetricsCard } from '../components/DailyMetricsCard'
 import type { Programme, UserProgramme, WorkoutLog } from '../lib/types'
 import { getPhaseForWeek, getCurrentWeek, colors, ui } from '../lib/utils'
 
@@ -73,6 +74,7 @@ export function ProgressPage() {
       <Layout>
         <div style={{ color: colors.textMuted }}>No active programme. Start one to see progress.</div>
         <BodyweightCard />
+        <DailyMetricsCard />
       </Layout>
     )
   }
@@ -207,6 +209,7 @@ export function ProgressPage() {
       )}
 
       <BodyweightCard />
+      <DailyMetricsCard />
     </Layout>
   )
 }

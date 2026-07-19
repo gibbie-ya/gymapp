@@ -71,6 +71,15 @@ export interface BodyWeightLog {
   created_at: string
 }
 
+export interface DailyMetric {
+  id: string
+  user_id: string
+  logged_date: string
+  calories: number | null
+  steps: number | null
+  created_at: string
+}
+
 export interface SetLog {
   exerciseName: string
   setNumber: number

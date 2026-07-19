@@ -29,6 +29,7 @@ Replaces a previous localStorage-based single-page app — all data now lives in
 - **Session stats** — live total volume (kg) while logging, a "Workout completed in X min · Y kg" banner on save, and per-session volume on the week view cards.
 - **Progress** — SVG line chart of top set weight per week per exercise, plus best-set / estimated-1RM (Epley) / total-volume / weeks-logged stats and a full set history table.
 - **Bodyweight tracking** — quick weigh-in entry on the Progress page with a date-scaled trend line and change-since-start.
+- **Calories & steps** — daily entry on the Progress page, charted by day, week, or month (weekly buckets run Monday–Sunday, resetting Sunday midnight); weekly/monthly views show per-day averages.
 - **JSON import** — paste a programme definition, preview it, and import. Week ranges like `"1-4"` or `"1,3,5"` expand into per-week session rows. Re-importing a programme with the same name prompts before overwriting.
 
 ## Getting started

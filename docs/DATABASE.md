@@ -115,12 +115,25 @@ Weekly (or whenever) weigh-ins, one row per user per day — logging twice on th
 | `weight_kg` | NUMERIC(5,2) | |
 | `created_at` | TIMESTAMPTZ | |
 
+### `daily_metrics`
+
+Calories consumed and daily step count, one row per user per day. Both columns are nullable so either can be logged alone; the upsert only sends filled fields, so logging one never nulls the other.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `user_id` | UUID FK → auth.users | `ON DELETE CASCADE` |
+| `logged_date` | DATE | Defaults to today; unique with `user_id` |
+| `calories` | INT | Nullable |
+| `steps` | INT | Nullable |
+| `created_at` | TIMESTAMPTZ | |
+
 ## Row-level security
 
 RLS is enabled on every table.
 
 - **Template tables** (`programmes`, `programme_sessions`, `session_exercises`, `exercise_definitions`): any authenticated user can read; insert/delete allowed for authenticated users so the Import page works. There is no roles system — anyone signed in can import or overwrite programmes. Fine for a single-user or trusted-group deployment; add an admin check if that changes.
-- **User tables** (`user_programmes`, `workout_logs`, `body_weight_logs`): `FOR ALL USING (auth.uid() = user_id)` — users can only see and modify their own rows.
+- **User tables** (`user_programmes`, `workout_logs`, `body_weight_logs`, `daily_metrics`): `FOR ALL USING (auth.uid() = user_id)` — users can only see and modify their own rows.
 
 ## Design notes
 

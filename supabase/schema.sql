@@ -80,6 +80,17 @@ CREATE TABLE body_weight_logs (
   UNIQUE(user_id, logged_date)
 );
 
+-- Daily nutrition/activity metrics: one row per user per day
+CREATE TABLE daily_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  logged_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  calories INT,
+  steps INT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, logged_date)
+);
+
 -- RLS: enable on all tables
 ALTER TABLE exercise_definitions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE programmes ENABLE ROW LEVEL SECURITY;
@@ -88,6 +99,7 @@ ALTER TABLE session_exercises ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_programmes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workout_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE body_weight_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_metrics ENABLE ROW LEVEL SECURITY;
 
 -- Programmes and sessions are readable by authenticated users (admin inserts via import)
 CREATE POLICY "Authenticated users can read programmes" ON programmes FOR SELECT TO authenticated USING (true);
@@ -109,3 +121,4 @@ CREATE POLICY "Authenticated users can insert exercise_definitions" ON exercise_
 CREATE POLICY "Users manage own programmes" ON user_programmes FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users manage own logs" ON workout_logs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users manage own bodyweight" ON body_weight_logs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users manage own daily metrics" ON daily_metrics FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
