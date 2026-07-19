@@ -33,6 +33,7 @@ export function SessionTools({ accentColor }: SessionToolsProps) {
   const [now, setNow] = useState(Date.now())
   const [flash, setFlash] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
   const remaining = endsAt ? Math.max(0, Math.ceil((endsAt - now) / 1000)) : 0
   const running = endsAt !== null && remaining > 0
@@ -41,6 +42,34 @@ export function SessionTools({ accentColor }: SessionToolsProps) {
     if (!endsAt) return
     const iv = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(iv)
+  }, [endsAt])
+
+  // Keep the screen awake while the timer runs. The lock auto-releases when
+  // the tab is hidden, so re-request it when the user comes back.
+  useEffect(() => {
+    if (!endsAt) return
+
+    let cancelled = false
+    async function acquire() {
+      try {
+        if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+          const lock = await navigator.wakeLock.request('screen')
+          if (cancelled) lock.release().catch(() => {})
+          else wakeLockRef.current = lock
+        }
+      } catch { /* low battery or unsupported — timer still works, screen may sleep */ }
+    }
+
+    acquire()
+    const onVisible = () => { if (document.visibilityState === 'visible') acquire() }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+      wakeLockRef.current?.release().catch(() => {})
+      wakeLockRef.current = null
+    }
   }, [endsAt])
 
   useEffect(() => {
